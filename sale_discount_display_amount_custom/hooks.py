@@ -20,16 +20,27 @@ COLUMNS = (
 )
 
 
-def pre_init_hook(cr):
-    """Pre-init hook - receives cursor only in Odoo 17"""
+def _get_cr(cr_or_env):
+    """Get cursor from cr or env (handles both Odoo 17 hook signatures)"""
+    if hasattr(cr_or_env, 'cr'):
+        # It's an Environment, get the cursor
+        return cr_or_env.cr
+    # It's already a cursor
+    return cr_or_env
+
+
+def pre_init_hook(cr_or_env):
+    """Pre-init hook - handles both cr and env signatures"""
+    cr = _get_cr(cr_or_env)
     for table, column in COLUMNS:
         if not column_exists(cr, table, column):
             _logger.info("Create discount column %s in database", column)
             create_column(cr, table, column, "numeric")
 
 
-def post_init_hook(cr, registry):
-    """Post-init hook - receives cursor and registry in Odoo 17"""
+def post_init_hook(cr_or_env, registry=None):
+    """Post-init hook - handles both (cr, registry) and (env) signatures"""
+    cr = _get_cr(cr_or_env)
     _logger.info("Compute discount columns")
 
     # Set default values for records without discount
@@ -62,6 +73,10 @@ def post_init_hook(cr, registry):
     order_ids = [row[0] for row in cr.fetchall()]
 
     if order_ids:
-        env = api.Environment(cr, SUPERUSER_ID, {})
+        # Get or create environment
+        if hasattr(cr_or_env, 'cr'):
+            env = cr_or_env
+        else:
+            env = api.Environment(cr, SUPERUSER_ID, {})
         orders = env["sale.order"].browse(order_ids)
         orders.mapped("order_line")._update_discount_display_fields()
