@@ -35,7 +35,6 @@ class SaleOrderLine(models.Model):
             line.price_subtotal_no_discount = 0
             line.price_total_no_discount = 0
             line.discount_total = 0
-            line.discount_subtotal = 0
             if not line.discount:
                 line.price_subtotal_no_discount = line.price_subtotal
                 line.price_total_no_discount = line.price_total
@@ -63,7 +62,11 @@ class SaleOrderLine(models.Model):
                 }
             )
 
-    @api.depends("product_uom_qty", "discount", "price_unit", "tax_id")
+    @api.model
+    def _get_compute_amount_depends(self):
+        return ["product_uom_qty", "discount", "price_unit", "tax_id"]
+
+    @api.depends(lambda self: self._get_compute_amount_depends())
     def _compute_amount(self):
         res = super()._compute_amount()
         self._update_discount_display_fields()

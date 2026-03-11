@@ -1,5 +1,4 @@
 # Copyright 2018 ACSONE SA/NV
-# Copyright 2026 Hito Fusion - Fix for Odoo 17
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
 {
@@ -7,9 +6,9 @@
     "summary": """
         This addon intends to display the amount of the discount computed on
         sale_order_line and sale_order level""",
-    "version": "17.0.1.1.2",
+    "version": "17.0.1.1.1",
     "license": "AGPL-3",
-    "author": "ACSONE SA/NV, Odoo Community Association (OCA), Hito Fusion",
+    "author": "ACSONE SA/NV, Odoo Community Association (OCA)",
     "website": "https://github.com/OCA/sale-workflow",
     "depends": ["sale_management"],
     "data": [

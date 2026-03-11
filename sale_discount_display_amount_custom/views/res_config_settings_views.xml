@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
-    <!-- Setting for display discount with/without tax -->
     <record
         id="res_config_settings_view_form_display_discount_with_tax"
         model="ir.ui.view"
@@ -8,21 +7,28 @@
         <field name="name">res.config.settings.view.form.display.discount</field>
         <field name="model">res.config.settings</field>
         <field name="priority" eval="99" />
-        <field name="inherit_id" ref="sale.res_config_settings_view_form" />
+        <field name="inherit_id" ref="base.res_config_settings_view_form" />
         <field name="arch" type="xml">
-            <xpath expr="//setting[@id='discount_sale_order_lines']" position="after">
-                <setting
+            <block name="catalog_setting_container" position="inside">
+                <div
+                    class="col-xs-12 col-md-6 o_setting_box"
                     id="discount_display_amount"
-                    string="Discount Display"
-                    help="OFF = Shows the Discount without TAX. ON = Shows the Discount with TAX"
                 >
-                    <field name="display_discount_with_tax" />
-                </setting>
-            </xpath>
+                    <div class="o_setting_left_pane">
+                        <field name="display_discount_with_tax" />
+                    </div>
+                    <div class="o_setting_right_pane">
+                        <label for="display_discount_with_tax" />
+                        <div class="text-muted">
+                            OFF = Shows the Discount without TAX<br
+                            />ON = Shows the Discount with TAX
+                        </div>
+                    </div>
+                </div>
+            </block>
         </field>
     </record>
 
-    <!-- Setting for report total without discount -->
     <record
         id="res_config_settings_view_form_report_total_without_discount"
         model="ir.ui.view"
@@ -31,18 +37,17 @@
             name="name"
         >res.config.settings.view.form.report.total.without.discount</field>
         <field name="model">res.config.settings</field>
-        <field name="priority" eval="99" />
+        <field name="priority" eval="10" />
         <field name="inherit_id" ref="sale.res_config_settings_view_form" />
         <field name="arch" type="xml">
-            <xpath expr="//setting[@id='proforma_configuration']" position="after">
+            <setting id="proforma_configuration" position="after">
                 <setting
                     id="report_total_without_discount"
-                    string="Report Total Without Discount"
                     help='Display "Total without discount" in report'
                 >
                     <field name="report_total_without_discount" />
                 </setting>
-            </xpath>
+            </setting>
         </field>
     </record>
 </odoo>
