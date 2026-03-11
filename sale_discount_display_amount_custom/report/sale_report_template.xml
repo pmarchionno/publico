@@ -4,8 +4,9 @@
         id="sale_discount_display_amount_document"
         inherit_id="sale.report_saleorder_document"
     >
-        <xpath expr="//div[@name='total']/div/table/t[1]" position="before">
-            <t groups="product.group_discount_per_so_line" t-if="doc.discount_total">
+        <!-- Add discount info before the tax totals call -->
+        <xpath expr="//div[@id='total']//table//t[@t-call='sale.document_tax_totals']" position="before">
+            <t t-if="doc.discount_total" groups="product.group_discount_per_so_line">
                 <t
                     t-set="is_discount"
                     t-value="doc.company_id.report_total_without_discount and doc.price_total_no_discount != doc.amount_total"
@@ -14,16 +15,15 @@
                     <td name="td_total_without_discount_label">
                         <strong>Total Without Discount</strong>
                     </td>
-                     <td name="td_total_without_discount" class="text-end">
+                    <td name="td_total_without_discount" class="text-end">
                         <span t-field="doc.price_total_no_discount" />
                     </td>
                 </tr>
-
                 <tr t-attf-class="{{ 'border-black' if not is_discount else '' }}">
                     <td name="td_discount_total_label">
                         <strong>Discount</strong>
                     </td>
-                     <td name="td_discount_total" class="text-end">
+                    <td name="td_discount_total" class="text-end">
                         <span t-field="doc.discount_total" />
                     </td>
                 </tr>
