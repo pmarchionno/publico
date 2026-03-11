@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<odoo>
+    <!-- Add discount display fields to sale order line tree -->
+    <record id="view_order_form" model="ir.ui.view">
+        <field name="name">sale.order.form.discount.display</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form" />
+        <field name="arch" type="xml">
+            <xpath
+                expr="//field[@name='order_line']//list//field[@name='discount']"
+                position="after"
+            >
+                <field name="price_subtotal_no_discount" optional="hide" />
+                <field name="price_total_no_discount" optional="hide" />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Add discount totals after tax_totals in sale order form -->
+    <record id="sale_order_view_form_display_discount" model="ir.ui.view">
+        <field name="name">sale.order.form.display.discount.totals</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form" />
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='tax_totals']" position="after">
+                <field name="display_discount_with_tax" invisible="1"/>
+                <div class="oe_subtotal_footer" invisible="discount_total == 0">
+                    <span class="oe_subtotal_footer_separator">
+                        <label for="price_subtotal_no_discount" invisible="display_discount_with_tax"/>
+                        <label for="price_total_no_discount" invisible="not display_discount_with_tax"/>
+                    </span>
+                    <field name="price_subtotal_no_discount" invisible="display_discount_with_tax"/>
+                    <field name="price_total_no_discount" invisible="not display_discount_with_tax"/>
+                </div>
+                <div class="oe_subtotal_footer" invisible="discount_total == 0">
+                    <span class="oe_subtotal_footer_separator">
+                        <label for="discount_subtotal" invisible="display_discount_with_tax"/>
+                        <label for="discount_total" invisible="not display_discount_with_tax"/>
+                    </span>
+                    <field name="discount_subtotal" invisible="display_discount_with_tax"/>
+                    <field name="discount_total" invisible="not display_discount_with_tax"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

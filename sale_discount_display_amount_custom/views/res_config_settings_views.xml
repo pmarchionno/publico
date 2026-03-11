@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record
+        id="res_config_settings_view_form_display_discount_with_tax"
+        model="ir.ui.view"
+    >
+        <field name="name">res.config.settings.view.form.display.discount</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="99" />
+        <field name="inherit_id" ref="sale.res_config_settings_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//setting[@id='discount_configuration']" position="after">
+                <setting
+                    id="discount_display_amount"
+                    help="OFF = Shows the Discount without TAX. ON = Shows the Discount with TAX"
+                >
+                    <field name="display_discount_with_tax" />
+                </setting>
+            </xpath>
+        </field>
+    </record>
+
+    <record
+        id="res_config_settings_view_form_report_total_without_discount"
+        model="ir.ui.view"
+    >
+        <field
+            name="name"
+        >res.config.settings.view.form.report.total.without.discount</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="10" />
+        <field name="inherit_id" ref="sale.res_config_settings_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//setting[@id='proforma_configuration']" position="after">
+                <setting
+                    id="report_total_without_discount"
+                    help='Display "Total without discount" in report'
+                >
+                    <field name="report_total_without_discount" />
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>
