@@ -1,57 +1,54 @@
 <?xml version="1.0" ?>
 <odoo>
+    <!-- Add discount display fields to sale order line tree -->
     <record id="view_order_form" model="ir.ui.view">
-        <field name="inherit_id" ref="sale.view_order_form" />
+        <field name="name">sale.order.form.discount.display.lines</field>
         <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form" />
+        <field name="priority">20</field>
         <field name="arch" type="xml">
-            <xpath
-                expr="//field[@name='order_line']//tree//field[@name='discount']"
-                position="after"
-            >
-                <field name="price_subtotal_no_discount" optional="hide" />
-                <field name="price_total_no_discount" optional="hide" />
+            <xpath expr="//field[@name='order_line']//tree//field[@name='discount']" position="after">
+                <field name="price_subtotal_no_discount" string="Subtotal w/o Disc." optional="hide" />
+                <field name="price_total_no_discount" string="Total w/o Disc." optional="hide" />
             </xpath>
         </field>
     </record>
+
+    <!-- Add discount totals in sale order form footer -->
     <record id="sale_order_view_form_display_discount" model="ir.ui.view">
+        <field name="name">sale.order.form.discount.display.totals</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form" />
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <data>
-                <xpath expr="//field[@name='tax_totals']" position="after">
-                    <field
-                        name="display_discount_with_tax"
-                        invisible="1"
-                        position="attributes"
-                    >
-                    </field>
-                    <field
-                        name="price_subtotal_no_discount"
-                        invisible="display_discount_with_tax == True"
-                        position="attributes"
-                    >
-                    </field>
-                    <field
-                        name="discount_subtotal"
-                        invisible="display_discount_with_tax == True"
-                        position="attributes"
-                    >
-                    </field>
-                    <field
-                        name="price_total_no_discount"
-                        invisible="display_discount_with_tax == False"
-                        position="attributes"
-                    >
-                    </field>
-                    <field
-                        name="discount_total"
-                        invisible="display_discount_with_tax == False"
-                        position="attributes"
-                    >
-                    </field>
-                </xpath>
-            </data>
+            <xpath expr="//field[@name='tax_totals']" position="after">
+                <field name="display_discount_with_tax" invisible="1"/>
+                <field name="discount_total" invisible="1"/>
+                
+                <!-- Show subtotal without discount (when not using tax) -->
+                <div invisible="discount_total == 0 or display_discount_with_tax">
+                    <strong>Subtotal Without Discount:</strong>
+                    <field name="price_subtotal_no_discount" class="oe_inline"/>
+                </div>
+                
+                <!-- Show total without discount (when using tax) -->
+                <div invisible="discount_total == 0 or not display_discount_with_tax">
+                    <strong>Total Without Discount:</strong>
+                    <field name="price_total_no_discount" class="oe_inline"/>
+                </div>
+                
+                <!-- Show discount subtotal (when not using tax) -->
+                <div invisible="discount_total == 0 or display_discount_with_tax">
+                    <strong>Discount:</strong>
+                    <field name="discount_subtotal" class="oe_inline"/>
+                </div>
+                
+                <!-- Show discount total (when using tax) -->
+                <div invisible="discount_total == 0 or not display_discount_with_tax">
+                    <strong>Discount (Tax incl.):</strong>
+                    <field name="discount_total" class="oe_inline"/>
+                </div>
+            </xpath>
         </field>
     </record>
 </odoo>
