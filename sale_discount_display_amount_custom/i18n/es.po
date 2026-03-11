@@ -110,3 +110,43 @@ msgstr "Total Sin Descuento"
 #: model:ir.model.fields,field_description:sale_discount_display_amount.field_sale_order_line__price_total_no_discount
 msgid "Total Without Discount"
 msgstr "Total sin descuento"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.view_order_form
+msgid "Subtotal w/o Disc."
+msgstr "Subtotal s/desc."
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.view_order_form
+msgid "Total w/o Disc."
+msgstr "Total s/desc."
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.sale_order_view_form_display_discount
+msgid "<strong>Subtotal Without Discount:</strong>"
+msgstr "<strong>Subtotal sin descuento:</strong>"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.sale_order_view_form_display_discount
+msgid "<strong>Total Without Discount:</strong>"
+msgstr "<strong>Total sin descuento:</strong>"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.sale_order_view_form_display_discount
+msgid "<strong>Discount:</strong>"
+msgstr "<strong>Descuento:</strong>"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.sale_order_view_form_display_discount
+msgid "<strong>Discount (Tax incl.):</strong>"
+msgstr "<strong>Descuento (IVA incl.):</strong>"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.res_config_settings_view_form_report_total_without_discount
+msgid "Report Total Without Discount"
+msgstr "Total sin descuento en informe"
+
+#. module: sale_discount_display_amount_custom
+#: model_terms:ir.ui.view,arch_db:sale_discount_display_amount_custom.res_config_settings_view_form_report_total_without_discount
+msgid "Display \"Total without discount\" in sales report"
+msgstr "Mostrar \"Total sin descuento\" en informe de ventas"
