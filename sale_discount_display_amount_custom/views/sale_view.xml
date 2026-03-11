@@ -7,11 +7,11 @@
         <field name="inherit_id" ref="sale.view_order_form" />
         <field name="arch" type="xml">
             <xpath
-                expr="//field[@name='order_line']//list//field[@name='discount']"
+                expr="//field[@name='order_line']//tree//field[@name='discount']"
                 position="after"
             >
-                <field name="price_subtotal_no_discount" optional="hide" />
-                <field name="price_total_no_discount" optional="hide" />
+                <field name="price_subtotal_no_discount" string="Subtotal w/o Disc." optional="hide" />
+                <field name="price_total_no_discount" string="Total w/o Disc." optional="hide" />
             </xpath>
         </field>
     </record>
@@ -25,22 +25,18 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='tax_totals']" position="after">
                 <field name="display_discount_with_tax" invisible="1"/>
-                <div class="oe_subtotal_footer" invisible="discount_total == 0">
-                    <span class="oe_subtotal_footer_separator">
-                        <label for="price_subtotal_no_discount" invisible="display_discount_with_tax"/>
-                        <label for="price_total_no_discount" invisible="not display_discount_with_tax"/>
-                    </span>
-                    <field name="price_subtotal_no_discount" invisible="display_discount_with_tax"/>
-                    <field name="price_total_no_discount" invisible="not display_discount_with_tax"/>
+                <div class="oe_subtotal_footer_separator" invisible="discount_total == 0">
+                    <label for="price_subtotal_no_discount" string="Subtotal Without Discount" invisible="display_discount_with_tax"/>
+                    <label for="price_total_no_discount" string="Total Without Discount" invisible="not display_discount_with_tax"/>
                 </div>
-                <div class="oe_subtotal_footer" invisible="discount_total == 0">
-                    <span class="oe_subtotal_footer_separator">
-                        <label for="discount_subtotal" invisible="display_discount_with_tax"/>
-                        <label for="discount_total" invisible="not display_discount_with_tax"/>
-                    </span>
-                    <field name="discount_subtotal" invisible="display_discount_with_tax"/>
-                    <field name="discount_total" invisible="not display_discount_with_tax"/>
+                <field name="price_subtotal_no_discount" invisible="display_discount_with_tax or discount_total == 0"/>
+                <field name="price_total_no_discount" invisible="not display_discount_with_tax or discount_total == 0"/>
+                <div class="oe_subtotal_footer_separator" invisible="discount_total == 0">
+                    <label for="discount_subtotal" string="Discount" invisible="display_discount_with_tax"/>
+                    <label for="discount_total" string="Discount (Tax incl.)" invisible="not display_discount_with_tax"/>
                 </div>
+                <field name="discount_subtotal" invisible="display_discount_with_tax or discount_total == 0"/>
+                <field name="discount_total" invisible="not display_discount_with_tax or discount_total == 0"/>
             </xpath>
         </field>
     </record>
