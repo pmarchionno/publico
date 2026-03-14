@@ -16,7 +16,8 @@ class AccountPaymentRegister(models.TransientModel):
     _inherit = 'account.payment.register'
 
     # === Campo Talonario de Recibo ===
-    # Definido aquí porque account_payment_pro_receiptbook no lo agrega al wizard
+    # El modelo account.payment.receiptbook tiene: company_id, partner_type
+    # NO tiene journal_id (ese campo solo existe en account.payment)
     receiptbook_id = fields.Many2one(
         'account.payment.receiptbook',
         string='Talonario de Recibo',
@@ -84,14 +85,13 @@ class AccountPaymentRegister(models.TransientModel):
 
     # === Onchange ===
     
-    @api.onchange('journal_id')
+    @api.onchange('journal_id', 'partner_type')
     def _onchange_journal_id_receiptbook(self):
         """Auto-seleccionar talonario por defecto cuando cambia el diario."""
-        if self.journal_id and self.company_id:
+        if self.company_id and self.partner_type:
             receiptbook = self.env['account.payment.receiptbook'].search([
-                ('journal_id', '=', self.journal_id.id),
-                ('partner_type', '=', self.partner_type),
                 ('company_id', '=', self.company_id.id),
+                ('partner_type', '=', self.partner_type),
             ], limit=1)
             self.receiptbook_id = receiptbook if receiptbook else False
 

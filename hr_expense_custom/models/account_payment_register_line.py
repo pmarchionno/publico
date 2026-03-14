@@ -34,8 +34,8 @@ class AccountPaymentRegisterLine(models.TransientModel):
         related='wizard_id.company_currency_id',
     )
     
-    payment_type = fields.Selection(
-        related='wizard_id.payment_type',
+    partner_type = fields.Selection(
+        related='wizard_id.partner_type',
     )
     
     journal_id = fields.Many2one(
@@ -59,13 +59,15 @@ class AccountPaymentRegisterLine(models.TransientModel):
         required=True,
     )
     
+    # Domain corregido: account.payment.receiptbook NO tiene journal_id
+    # Solo tiene company_id y partner_type
     receiptbook_id = fields.Many2one(
         'account.payment.receiptbook',
         string='Talonario',
-        domain="[('journal_id', '=', journal_id), ('partner_type', '=', payment_type)]",
+        domain="[('company_id', '=', company_id), ('partner_type', '=', partner_type)]",
     )
     
-    @api.depends('journal_id', 'payment_type')
+    @api.depends('journal_id', 'partner_type')
     def _compute_payment_method_line_id(self):
         """Auto-seleccionar método de pago por defecto del diario"""
         for line in self:
@@ -73,8 +75,10 @@ class AccountPaymentRegisterLine(models.TransientModel):
                 line.payment_method_line_id = False
                 continue
                 
-            payment_type = line.payment_type or 'outbound'
-            if payment_type == 'outbound':
+            payment_type = line.partner_type
+            # partner_type 'supplier' -> payment_type 'outbound'
+            # partner_type 'customer' -> payment_type 'inbound'
+            if payment_type == 'supplier':
                 methods = line.journal_id.outbound_payment_method_line_ids
             else:
                 methods = line.journal_id.inbound_payment_method_line_ids
@@ -85,11 +89,10 @@ class AccountPaymentRegisterLine(models.TransientModel):
     
     @api.onchange('journal_id')
     def _onchange_journal_id(self):
-        """Auto-seleccionar talonario por defecto del diario"""
-        if self.journal_id:
-            payment_type = self.payment_type or 'outbound'
+        """Auto-seleccionar talonario por defecto"""
+        if self.company_id and self.partner_type:
             receiptbook = self.env['account.payment.receiptbook'].search([
-                ('journal_id', '=', self.journal_id.id),
-                ('partner_type', '=', payment_type),
+                ('company_id', '=', self.company_id.id),
+                ('partner_type', '=', self.partner_type),
             ], limit=1)
             self.receiptbook_id = receiptbook if receiptbook else False

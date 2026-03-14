@@ -6,7 +6,9 @@
         1. Mostrar receiptbook_id para seleccionar talonario
         2. Mostrar pestaña de Pagos cuando el método es payment_bundle
         
-        NOTA: Odoo 18 usa <list> en lugar de <tree>
+        NOTA: 
+        - Odoo 18 usa <list> en lugar de <tree>
+        - account.payment.receiptbook tiene company_id y partner_type (NO journal_id)
     -->
     <record id="view_account_payment_register_form_expense" model="ir.ui.view">
         <field name="name">account.payment.register.form.expense</field>
@@ -22,6 +24,7 @@
             </form>
             
             <!-- Talonario de Recibo después del método de pago -->
+            <!-- Domain usa company_id y partner_type, NO journal_id -->
             <field name="payment_method_line_id" position="after">
                 <field name="receiptbook_id" 
                        string="Talonario de Recibo"
