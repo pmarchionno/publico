@@ -5,9 +5,6 @@
         Vista del wizard account.payment.register extendida para:
         1. Mostrar receiptbook_id para seleccionar talonario
         2. Mostrar pestaña de Pagos cuando el método es payment_bundle
-        
-        NOTA: El campo receiptbook_id es definido por hr_expense_custom,
-        no viene de account_payment_pro_receiptbook (ese módulo solo lo tiene en account.payment).
     -->
     <record id="view_account_payment_register_form_expense" model="ir.ui.view">
         <field name="name">account.payment.register.form.expense</field>
@@ -34,16 +31,8 @@
             <xpath expr="//footer" position="before">
                 <group invisible="not is_payment_bundle" col="1">
                     <separator string="Líneas de Pago"/>
-                    <field name="payment_line_ids" nolabel="1"
-                           context="{
-                               'default_wizard_id': id,
-                               'default_company_id': company_id,
-                           }">
-                        <tree editable="bottom" create="1" delete="1">
-                            <field name="wizard_id" column_invisible="1"/>
-                            <field name="company_id" column_invisible="1"/>
-                            <field name="currency_id" column_invisible="1"/>
-                            <field name="company_currency_id" column_invisible="1"/>
+                    <field name="payment_line_ids" nolabel="1">
+                        <tree editable="bottom">
                             <field name="journal_id" 
                                    options="{'no_create': True}"
                                    required="1"/>
