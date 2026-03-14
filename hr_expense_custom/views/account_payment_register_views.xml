@@ -3,8 +3,11 @@
 
     <!-- 
         Vista del wizard account.payment.register extendida para:
-        1. Mostrar receiptbook_id cuando se paga desde gastos
+        1. Mostrar receiptbook_id para seleccionar talonario
         2. Mostrar pestaña de Pagos cuando el método es payment_bundle
+        
+        NOTA: El campo receiptbook_id es definido por hr_expense_custom,
+        no viene de account_payment_pro_receiptbook (ese módulo solo lo tiene en account.payment).
     -->
     <record id="view_account_payment_register_form_expense" model="ir.ui.view">
         <field name="name">account.payment.register.form.expense</field>
@@ -16,19 +19,18 @@
             <!-- Campos ocultos necesarios -->
             <form position="inside">
                 <field name="is_payment_bundle" invisible="1"/>
-                <field name="company_currency_id" invisible="1"/>
+                <field name="is_from_expense" invisible="1"/>
             </form>
             
-            <!-- Talonario de Recibo después del diario -->
-            <field name="journal_id" position="after">
+            <!-- Talonario de Recibo después del método de pago -->
+            <field name="payment_method_line_id" position="after">
                 <field name="receiptbook_id" 
                        string="Talonario de Recibo"
                        options="{'no_create': True, 'no_open': True}"
-                       domain="[('journal_id', '=', journal_id), ('payment_type', '=', payment_type)]"
                        invisible="not journal_id"/>
             </field>
             
-            <!-- Pestaña de Pagos Múltiples (visible solo con payment_bundle) -->
+            <!-- Sección de Pagos Múltiples (visible solo con payment_bundle) -->
             <xpath expr="//footer" position="before">
                 <group invisible="not is_payment_bundle" col="1">
                     <separator string="Líneas de Pago"/>
@@ -44,25 +46,21 @@
                             <field name="company_currency_id" column_invisible="1"/>
                             <field name="journal_id" 
                                    options="{'no_create': True}"
-                                   domain="[('type', 'in', ('bank', 'cash')), ('company_id', '=', company_id)]"/>
+                                   required="1"/>
                             <field name="payment_method_line_id" 
                                    options="{'no_create': True}"
                                    optional="hide"/>
-                            <field name="amount" sum="Total"/>
+                            <field name="amount" sum="Total" required="1"/>
                             <field name="receiptbook_id" 
                                    options="{'no_create': True}"
                                    optional="show"/>
                         </tree>
                     </field>
-                    <group>
-                        <group>
-                            <field name="payment_lines_total" string="Total en líneas"/>
-                        </group>
-                        <group>
-                            <field name="payment_lines_difference" string="Diferencia"
-                                   decoration-danger="payment_lines_difference != 0"
-                                   decoration-success="payment_lines_difference == 0"/>
-                        </group>
+                    <group col="2">
+                        <field name="payment_lines_total" string="Total en líneas"/>
+                        <field name="payment_lines_difference" string="Diferencia"
+                               decoration-danger="payment_lines_difference != 0"
+                               decoration-success="payment_lines_difference == 0"/>
                     </group>
                 </group>
             </xpath>

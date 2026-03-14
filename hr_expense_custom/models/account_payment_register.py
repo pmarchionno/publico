@@ -5,10 +5,24 @@ from odoo import api, fields, models, Command
 class AccountPaymentRegister(models.TransientModel):
     """
     Hereda el wizard de registro de pago para agregar:
-    1. Campo de Talonario de Recibo cuando se paga desde Gastos
+    1. Campo de Talonario de Recibo (receiptbook_id) - campo propio del wizard
     2. Soporte para Pagos Múltiples (payment_bundle) con líneas de pago
+    
+    NOTA: El campo receiptbook_id NO existe en account.payment.register por defecto.
+    El módulo account_payment_pro_receiptbook solo lo define en account.payment.
+    Nosotros lo agregamos aquí como campo transient para permitir seleccionarlo
+    en el wizard y propagarlo al pago creado.
     """
     _inherit = 'account.payment.register'
+
+    # === Campo Talonario de Recibo ===
+    # Definido aquí porque account_payment_pro_receiptbook no lo agrega al wizard
+    receiptbook_id = fields.Many2one(
+        'account.payment.receiptbook',
+        string='Talonario de Recibo',
+        check_company=True,
+        domain="[('company_id', '=', company_id), ('partner_type', '=', partner_type)]",
+    )
 
     # === Campos para detección de contexto ===
     is_from_expense = fields.Boolean(
@@ -47,7 +61,7 @@ class AccountPaymentRegister(models.TransientModel):
         """Detecta si el wizard fue abierto desde un reporte de gastos."""
         for wizard in self:
             expense_moves = wizard.line_ids.mapped('move_id').filtered(
-                lambda m: m.expense_sheet_id
+                lambda m: hasattr(m, 'expense_sheet_id') and m.expense_sheet_id
             )
             wizard.is_from_expense = bool(expense_moves)
 
@@ -56,6 +70,7 @@ class AccountPaymentRegister(models.TransientModel):
         """Detecta si el método de pago es 'payment_bundle' (Pagos Múltiples)."""
         for wizard in self:
             wizard.is_payment_bundle = (
+                wizard.payment_method_line_id and
                 wizard.payment_method_line_id.payment_method_id.code == 'payment_bundle'
             )
 
@@ -67,30 +82,19 @@ class AccountPaymentRegister(models.TransientModel):
             wizard.payment_lines_total = total
             wizard.payment_lines_difference = wizard.amount - total
 
-    # === Defaults ===
-    
-    @api.model
-    def default_get(self, fields_list):
-        """Override para establecer valores por defecto del talonario."""
-        res = super().default_get(fields_list)
-        
-        # Talonario por defecto cuando viene de expense
-        if self.env.context.get('active_model') == 'hr.expense.sheet':
-            if 'receiptbook_id' in fields_list and not res.get('receiptbook_id'):
-                journal_id = res.get('journal_id')
-                if journal_id:
-                    journal = self.env['account.journal'].browse(journal_id)
-                    receiptbook = self.env['account.payment.receiptbook'].search([
-                        ('journal_id', '=', journal.id),
-                        ('payment_type', '=', 'outbound'),
-                    ], limit=1)
-                    if receiptbook:
-                        res['receiptbook_id'] = receiptbook.id
-        
-        return res
-
     # === Onchange ===
     
+    @api.onchange('journal_id')
+    def _onchange_journal_id_receiptbook(self):
+        """Auto-seleccionar talonario por defecto cuando cambia el diario."""
+        if self.journal_id and self.company_id:
+            receiptbook = self.env['account.payment.receiptbook'].search([
+                ('journal_id', '=', self.journal_id.id),
+                ('partner_type', '=', self.partner_type),
+                ('company_id', '=', self.company_id.id),
+            ], limit=1)
+            self.receiptbook_id = receiptbook if receiptbook else False
+
     @api.onchange('is_payment_bundle')
     def _onchange_is_payment_bundle(self):
         """Cuando cambia a payment_bundle, limpiar líneas previas."""
@@ -107,8 +111,8 @@ class AccountPaymentRegister(models.TransientModel):
         """
         payment_vals = super()._create_payment_vals_from_wizard(batch_result)
         
-        # Propagar receiptbook_id
-        if self.receiptbook_id and 'receiptbook_id' not in payment_vals:
+        # Propagar receiptbook_id si fue seleccionado
+        if self.receiptbook_id:
             payment_vals['receiptbook_id'] = self.receiptbook_id.id
         
         # Si es payment_bundle con líneas, preparar la estructura
@@ -126,7 +130,7 @@ class AccountPaymentRegister(models.TransientModel):
                     'payment_type': payment_vals.get('payment_type'),
                     'company_id': payment_vals.get('company_id'),
                     'journal_id': line.journal_id.id,
-                    'payment_method_line_id': line.payment_method_line_id.id,
+                    'payment_method_line_id': line.payment_method_line_id.id if line.payment_method_line_id else False,
                     'amount': line.amount,
                     'currency_id': self.company_currency_id.id,
                 }
@@ -140,11 +144,3 @@ class AccountPaymentRegister(models.TransientModel):
             payment_vals['link_payment_ids'] = link_payment_vals
             
         return payment_vals
-
-    def action_create_payments(self):
-        """
-        Override para asegurar compatibilidad con payment_bundle.
-        El módulo l10n_ar_payment_bundle maneja la creación de link_payment_ids
-        automáticamente cuando se setea en los vals.
-        """
-        return super().action_create_payments()
