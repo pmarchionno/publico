@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'HR Expense Custom - Payment Bundle Support',
-    'version': '18.0.2.2.0',
+    'version': '18.0.2.3.0',
     'category': 'Human Resources/Expenses',
     'summary': 'Talonario de Recibo y Pagos Múltiples en wizard de pago de gastos',
     'description': '''

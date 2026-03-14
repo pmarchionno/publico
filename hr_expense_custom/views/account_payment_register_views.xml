@@ -5,6 +5,8 @@
         Vista del wizard account.payment.register extendida para:
         1. Mostrar receiptbook_id para seleccionar talonario
         2. Mostrar pestaña de Pagos cuando el método es payment_bundle
+        
+        NOTA: Odoo 18 usa <list> en lugar de <tree>
     -->
     <record id="view_account_payment_register_form_expense" model="ir.ui.view">
         <field name="name">account.payment.register.form.expense</field>
@@ -32,7 +34,7 @@
                 <group invisible="not is_payment_bundle" col="1">
                     <separator string="Líneas de Pago"/>
                     <field name="payment_line_ids" nolabel="1">
-                        <tree editable="bottom">
+                        <list editable="bottom">
                             <field name="journal_id" 
                                    options="{'no_create': True}"
                                    required="1"/>
@@ -43,7 +45,7 @@
                             <field name="receiptbook_id" 
                                    options="{'no_create': True}"
                                    optional="show"/>
-                        </tree>
+                        </list>
                     </field>
                     <group col="2">
                         <field name="payment_lines_total" string="Total en líneas"/>
