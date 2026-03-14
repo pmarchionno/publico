@@ -1,113 +1,87 @@
-# HR Expense - Talonario de Recibo
-
-**Versión:** 18.0.1.0.0  
-**Autor:** Hitofusion  
-**Licencia:** LGPL-3
+# HR Expense Custom - Payment Bundle Support
 
 ## Descripción
 
-Módulo custom para Odoo 18 que agrega la funcionalidad de seleccionar un **Talonario de Recibo** (Receipt Book) al registrar pagos desde Reportes de Gastos (HR Expense).
+Extensiones para el wizard de pago de gastos (`account.payment.register`) que agregan:
 
-### Características
+1. **Talonario de Recibo**: Campo `receiptbook_id` visible al pagar gastos
+2. **Pagos Múltiples**: Soporte para el método `payment_bundle` con líneas de pago
 
-- ✅ Campo "Talonario de Recibo" en el wizard de registro de pago desde gastos
-- ✅ Mismo comportamiento que en "Pagos de Proveedores" de Contabilidad
-- ✅ Propagación automática del talonario al pago creado
-- ✅ Autocompletar talonario por defecto del diario
-- ✅ Compatible con Odoo 18 Community y Enterprise
-- ✅ Sin dependencias de módulos externos
+## Funcionalidades
+
+### 1. Talonario de Recibo
+
+Cuando se paga un gasto desde el wizard:
+- Se muestra el campo "Talonario de Recibo" después del diario
+- Se auto-selecciona el talonario por defecto según el diario
+- El talonario se propaga al pago creado
+
+### 2. Pagos Múltiples (Payment Bundle)
+
+Cuando se selecciona un diario con método de pago "Pago Multiple" (`payment_bundle`):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Registrar Pago de Gasto                                    │
+├─────────────────────────────────────────────────────────────┤
+│  Diario: [Pagos Múltiples ▼]                                │
+│  Método de Pago: Pago Multiple (auto)                       │
+│  Talonario: [____________ ▼]                                │
+├─────────────────────────────────────────────────────────────┤
+│  ═══════════════ Líneas de Pago ═══════════════             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Diario    │ Método    │ Monto   │ Talonario         │   │
+│  │ Banco A   │ Transf.   │ 5000    │ T-001             │   │
+│  │ Efectivo  │ Manual    │ 3000    │ T-002             │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Total en líneas: 8000    Diferencia: 0 ✓                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Al confirmar:
+- Se crea un **pago principal** con `amount=0` y `is_main_payment=True`
+- Se crean **pagos hijos** (`link_payment_ids`) para cada línea
+- Todos los pagos se vinculan y se postean juntos
 
 ## Dependencias
 
-- `hr_expense` (módulo core)
-- `account` (módulo core)
+### Requeridas
+- `hr_expense` (Odoo base)
+- `account_payment_pro_receiptbook` (ADHOC)
+
+### Opcionales
+- `l10n_ar_payment_bundle` (ADHOC) - Para la funcionalidad de pagos múltiples
 
 ## Instalación
 
-### Método 1: Descarga manual
+1. Copiar el módulo a la carpeta de addons
+2. Actualizar lista de aplicaciones
+3. Instalar "HR Expense Custom - Payment Bundle Support"
 
-1. Descargar la carpeta `hr_expense_custom`
-2. Colocar en el directorio de addons personalizados de tu Odoo (ej: `/addons` o `/cl-emu-custom`)
-3. Ir a **Aplicaciones** → **Actualizar lista de aplicaciones** (modo desarrollador activado)
-4. Buscar "HR Expense - Talonario de Recibo"
-5. Click en **Instalar**
+## Configuración
 
-### Método 2: CLI Odoo
+### Para Pagos Múltiples
 
-```bash
-odoo -u hr_expense_custom -d nombre_basedatos
-```
+1. Ir a **Contabilidad → Configuración → Diarios**
+2. Crear un diario de tipo "Efectivo" llamado "Pagos Múltiples"
+3. En pestaña "Pagos salientes", agregar el método "Pago Multiple"
+4. En pestaña "Pagos entrantes", agregar el método "Pago Multiple"
 
-### Método 3: Interfaz web
+### Para Talonarios
 
-1. Ir a **Configuración** → **Apps & Modules** → **Apps**
-2. Activar modo desarrollador (Configuración → Activar el Modo Desarrollador)
-3. Click en **Actualizar lista de aplicaciones**
-4. Buscar "HR Expense - Talonario de Recibo"
-5. Click en **Instalar**
+1. Ir a **Contabilidad → Configuración → Talonarios de Pago**
+2. Crear talonarios asociados a cada diario de pago
 
-## Uso
+## Compatibilidad
 
-1. Abrir un **Reporte de Gastos** (HR → Gastos → Reportes)
-2. Registrar Pago
-3. En el wizard de pago, el campo **"Talonario de Recibo"** aparecerá automáticamente después del diario
-4. Seleccionar el talonario deseado
-5. Completar el registro de pago
+- **Odoo**: 18.0
+- **Python**: 3.10+
 
-El talonario seleccionado se propagará automáticamente al pago creado.
+## Autor
 
-## Contenido del módulo
+**Hito** - https://www.hito.com.ar
 
-```
-hr_expense_custom/
-├── __manifest__.py              # Definición del módulo
-├── __init__.py                  # Inicializador
-├── README.md                    # Este archivo
-├── models/
-│   ├── __init__.py             # Importa el modelo
-│   └── account_payment_register.py  # Lógica principal
-└── views/
-    └── account_payment_register_views.xml  # Interfaz XML
-```
+## Licencia
 
-## Funcionalidad técnica
-
-### Modelo extendido: `account.payment.register`
-
-#### Campo agregado:
-
-- **receiptbook_id** (Many2one → account.payment.receiptbook)
-  - String: "Talonario de Recibo"
-  - Sin permitir crear ni abrir registros en línea
-
-#### Métodos sobrescritos:
-
-1. **default_get()**
-   - Autodetecta si el wizard es abierto desde Gastos
-   - Busca y asigna talonario por defecto del diario
-   - Compatible con variantes del modelo receiptbook
-
-2. **\_create_payment_vals_from_wizard()**
-   - Propaga receiptbook_id al pago creado
-   - Verifica que receiptbook_id exista en account.payment antes de propagarlo
-
-3. **\_compute_is_from_expense()**
-   - Campo compute para detectar origen del pago
-   - Usado internamente para lógica condicional
-
-## Cambios de versión
-
-### v18.0.1.0.0 (inicial)
-
-- Implementación base del módulo
-- Agregación de campo receiptbook_id al wizard
-- Propagación al pago creado
-- Vista XML integrada
-
-## Soporte
-
-Para reportar bugs o solicitar mejoras, contactar a Hitofusion.
-
----
-
-**Última actualización:** 12 de marzo de 2026
+LGPL-3
