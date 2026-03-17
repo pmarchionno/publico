@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ===================== MELI ORDER RAW ===================== -->
+    
+    <!-- Tree View -->
+    <record id="meli_order_raw_view_tree" model="ir.ui.view">
+        <field name="name">meli.order.raw.tree</field>
+        <field name="model">meli.order.raw</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="state=='error'" 
+                  decoration-warning="state=='processing'"
+                  decoration-success="state=='done'"
+                  decoration-muted="state=='skipped'">
+                <field name="order_id_ml"/>
+                <field name="ml_buyer_nickname"/>
+                <field name="ml_status"/>
+                <field name="ml_total_amount" sum="Total"/>
+                <field name="ml_date_created"/>
+                <field name="state" widget="badge"/>
+                <field name="retry_count"/>
+                <field name="extracted_at"/>
+                <field name="processed_at"/>
+                <field name="sale_order_id"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="meli_order_raw_view_form" model="ir.ui.view">
+        <field name="name">meli.order.raw.form</field>
+        <field name="model">meli.order.raw</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_reprocess" string="Reprocesar" type="object"
+                            class="btn-primary"
+                            invisible="state not in ('error', 'skipped')"/>
+                    <button name="action_view_json" string="Ver JSON" type="object"
+                            class="btn-secondary"/>
+                    <field name="state" widget="statusbar" 
+                           statusbar_visible="pending,processing,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="order_id_ml" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Datos MercadoLibre">
+                            <field name="ml_status"/>
+                            <field name="ml_buyer_nickname"/>
+                            <field name="ml_total_amount"/>
+                            <field name="ml_date_created"/>
+                        </group>
+                        <group string="Procesamiento">
+                            <field name="extracted_at"/>
+                            <field name="processed_at"/>
+                            <field name="retry_count"/>
+                            <field name="max_retries"/>
+                            <field name="sale_order_id"/>
+                        </group>
+                    </group>
+                    <group string="Error" invisible="not error_message">
+                        <field name="error_message" readonly="1" nolabel="1"/>
+                    </group>
+                    <notebook>
+                        <page string="JSON Data">
+                            <field name="json_data" readonly="1" widget="ace" 
+                                   options="{'mode': 'json'}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="meli_order_raw_view_search" model="ir.ui.view">
+        <field name="name">meli.order.raw.search</field>
+        <field name="model">meli.order.raw</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="order_id_ml"/>
+                <field name="ml_buyer_nickname"/>
+                <field name="ml_status"/>
+                <field name="error_message"/>
+                <separator/>
+                <filter name="pending" string="Pendientes" 
+                        domain="[('state', '=', 'pending')]"/>
+                <filter name="processing" string="Procesando" 
+                        domain="[('state', '=', 'processing')]"/>
+                <filter name="done" string="Procesados" 
+                        domain="[('state', '=', 'done')]"/>
+                <filter name="error" string="Con Error" 
+                        domain="[('state', '=', 'error')]"/>
+                <separator/>
+                <filter name="today" string="Hoy" 
+                        domain="[('extracted_at', '>=', (context_today()).strftime('%Y-%m-%d'))]"/>
+                <filter name="this_week" string="Esta Semana" 
+                        domain="[('extracted_at', '>=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_ml_status" string="Estado ML" context="{'group_by': 'ml_status'}"/>
+                    <filter name="group_date" string="Fecha Extracción" context="{'group_by': 'extracted_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="meli_order_raw_action" model="ir.actions.act_window">
+        <field name="name">Órdenes ML Raw</field>
+        <field name="res_model">meli.order.raw</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="meli_order_raw_view_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay órdenes de MercadoLibre
+            </p>
+            <p>
+                Las órdenes se extraen automáticamente cada 15 minutos.
+            </p>
+        </field>
+    </record>
+
+    <!-- ===================== MELI CONFIG ===================== -->
+    
+    <!-- Form View -->
+    <record id="meli_async_config_view_form" model="ir.ui.view">
+        <field name="name">meli.async.config.form</field>
+        <field name="model">meli.async.config</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" 
+                                name="action_view_pending" icon="fa-clock-o">
+                            <field string="Pendientes" name="orders_pending" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" type="object"
+                                name="action_view_errors" icon="fa-exclamation-triangle">
+                            <field string="Con Error" name="orders_error" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group string="Credenciales MercadoLibre">
+                            <field name="client_id"/>
+                            <field name="client_secret" password="True"/>
+                            <field name="seller_id"/>
+                            <field name="access_token" password="True"/>
+                            <field name="refresh_token" password="True"/>
+                            <button name="action_test_connection" string="Probar Conexión" 
+                                    type="object" class="btn-secondary"/>
+                        </group>
+                        <group string="Estadísticas">
+                            <field name="last_extraction_date" readonly="1"/>
+                            <field name="last_processing_date" readonly="1"/>
+                            <field name="orders_extracted_today" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Extracción">
+                            <group>
+                                <group>
+                                    <field name="extraction_interval"/>
+                                    <field name="extraction_batch_size"/>
+                                    <field name="extraction_days_back"/>
+                                </group>
+                                <group string="Estados a Sincronizar">
+                                    <field name="sync_paid"/>
+                                    <field name="sync_pending"/>
+                                    <field name="sync_cancelled"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Procesamiento">
+                            <group>
+                                <group>
+                                    <field name="processing_batch_size"/>
+                                    <field name="max_retries"/>
+                                </group>
+                                <group string="Opciones">
+                                    <field name="auto_confirm_order"/>
+                                    <field name="auto_create_invoice"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Mapeos">
+                            <group>
+                                <field name="default_warehouse_id"/>
+                                <field name="default_pricelist_id"/>
+                                <field name="meli_payment_term_id"/>
+                                <field name="meli_sales_team_id"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="meli_async_config_action" model="ir.actions.act_window">
+        <field name="name">Configuración ML Async</field>
+        <field name="res_model">meli.async.config</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+    </record>
+
+    <!-- ===================== JSON WIZARD ===================== -->
+    
+    <record id="meli_order_raw_json_wizard_view_form" model="ir.ui.view">
+        <field name="name">meli.order.raw.json.wizard.form</field>
+        <field name="model">meli.order.raw.json.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="json_formatted" widget="ace" 
+                               options="{'mode': 'json'}" nolabel="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Cerrar" class="btn-primary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===================== MENUS ===================== -->
+    
+    <menuitem id="meli_async_menu_root"
+              name="MercadoLibre Async"
+              web_icon="meli_oerp_async,static/description/icon.png"
+              sequence="100"/>
+    
+    <menuitem id="meli_async_menu_orders"
+              name="Órdenes Raw"
+              parent="meli_async_menu_root"
+              action="meli_order_raw_action"
+              sequence="10"/>
+    
+    <menuitem id="meli_async_menu_config"
+              name="Configuración"
+              parent="meli_async_menu_root"
+              action="meli_async_config_action"
+              sequence="90"/>
+
+</odoo>

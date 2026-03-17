@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- FASE 1: Cron de Extracción -->
+    <record id="cron_meli_extract_orders" model="ir.cron">
+        <field name="name">MeLi Async: Extraer Órdenes</field>
+        <field name="model_id" ref="model_meli_sync_service"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_extract_orders()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+        <field name="doall">False</field>
+    </record>
+
+    <!-- FASE 2: Cron de Procesamiento -->
+    <record id="cron_meli_process_orders" model="ir.cron">
+        <field name="name">MeLi Async: Procesar Órdenes</field>
+        <field name="model_id" ref="model_meli_sync_service"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_process_orders()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+        <field name="doall">False</field>
+    </record>
+
+    <!-- Cron de Limpieza (semanal) -->
+    <record id="cron_meli_cleanup" model="ir.cron">
+        <field name="name">MeLi Async: Limpieza Registros Antiguos</field>
+        <field name="model_id" ref="model_meli_order_raw"/>
+        <field name="state">code</field>
+        <field name="code">model.cleanup_old_records(days=30)</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">weeks</field>
+        <field name="numbercall">-1</field>
+        <field name="active">True</field>
+        <field name="doall">False</field>
+    </record>
+</odoo>
