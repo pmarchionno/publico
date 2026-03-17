@@ -1,14 +1,24 @@
 # -*- coding: utf-8 -*-
 {
-    'name': 'MercadoLibre Orders - Optimized Cron',
-    'version': '17.0.1.0.0',
-    'summary': 'Optimización del cron de órdenes de MercadoLibre para Odoo.sh',
+    'name': 'MercadoLibre Orders - Optimized Cron (Alto Volumen)',
+    'version': '17.0.2.0.0',
+    'summary': 'Optimización del cron de ML para ALTO VOLUMEN (1k-3k órdenes/día)',
     'description': """
-MercadoLibre Orders - Optimized Cron
-====================================
+MercadoLibre Orders - Optimized Cron (Alto Volumen)
+====================================================
 
-Optimiza el procesamiento de órdenes de MercadoLibre para evitar timeouts 
-y problemas de rendimiento en Odoo.sh.
+Versión optimizada para operaciones de alto volumen en Odoo.sh.
+
+Configuración por defecto (Alto Volumen):
+-----------------------------------------
+* Batch size: 100 órdenes por ejecución
+* Tiempo máximo: 240 segundos (4 minutos)
+* Órdenes por página: 50 (máximo de ML API)
+
+Capacidad con cron cada 30 min:
+-------------------------------
+* 2 ejecuciones/hora × 100 = 200 órdenes/hora
+* Soporta hasta 4.800 órdenes/día
 
 Características:
 ----------------
@@ -19,11 +29,11 @@ Características:
 * Compatible con queue_job para procesamiento asíncrono (opcional)
 * Logging mejorado para diagnóstico
 
-Configuración:
---------------
-* mercadolibre_cron_batch_size: Órdenes por ejecución (default: 50)
-* mercadolibre_cron_max_time: Tiempo máximo en segundos (default: 180)
-* mercadolibre_cron_use_queue: Usar queue_job si está disponible
+Cambios v2.0.0:
+---------------
+* Defaults optimizados para alto volumen
+* batch_size: 50 → 100
+* max_time: 180s → 240s
 
 Autor: Hito
     """,
