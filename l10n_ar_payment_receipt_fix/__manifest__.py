@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Fix Recibo de Pago - Retenciones Argentina',
-    'version': '17.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Accounting/Localizations',
     'summary': 'Corrige el importe de transferencia en recibos con retenciones',
     'description': '''
