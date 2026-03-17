@@ -11,22 +11,29 @@
     >
         <!-- Insert discount rows in the total summary section -->
         <xpath expr="//div[@name='so_total_summary']" position="inside">
-            <t t-if="doc.discount_total" groups="product.group_discount_per_so_line">
+            <t t-set="discount_display" t-value="doc._get_discount_display_vals()"/>
+            <t t-if="discount_display['show_discount']" groups="product.group_discount_per_so_line">
                 <div class="row">
                     <div t-attf-class="#{'col-6' if report_type != 'html' else 'col-sm-7 col-md-6'} ms-auto">
                         <table class="table table-sm table-borderless">
                             <!-- Show Total Without Discount if enabled -->
-                            <tr t-if="doc.company_id.report_total_without_discount and doc.price_total_no_discount != doc.amount_total">
-                                <td><strong>Total Without Discount</strong></td>
+                            <tr t-if="discount_display['show_total_without_discount']">
+                                <td><strong t-out="discount_display['total_without_discount_label']"/></td>
                                 <td class="text-end">
-                                    <span t-field="doc.price_total_no_discount"/>
+                                    <span
+                                        t-out="discount_display['total_without_discount_amount']"
+                                        t-options='{"widget": "monetary", "display_currency": doc.currency_id}'
+                                    />
                                 </td>
                             </tr>
                             <!-- Show Discount Amount -->
                             <tr>
-                                <td><strong>Discount</strong></td>
+                                <td><strong t-out="discount_display['discount_label']"/></td>
                                 <td class="text-end">
-                                    <span t-field="doc.discount_total"/>
+                                    <span
+                                        t-out="discount_display['discount_amount']"
+                                        t-options='{"widget": "monetary", "display_currency": doc.currency_id}'
+                                    />
                                 </td>
                             </tr>
                         </table>

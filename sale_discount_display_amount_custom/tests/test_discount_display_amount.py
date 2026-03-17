@@ -40,3 +40,41 @@ class TestDiscountDisplay(TransactionCase):
         )
         first_line = so2.order_line[0]
         self.assertEqual(first_line.price_total_no_discount, first_line.price_total)
+
+    def test_discount_display_values_follow_company_mode(self):
+        product = self.env["product.product"].create(
+            {"name": "Product TEST", "type": "consu"}
+        )
+        customer = self.env["res.partner"].create(
+            {"name": "Customer TEST", "is_company": False, "email": "test@tes.ttest"}
+        )
+        order = self.env["sale.order"].create({"partner_id": customer.id})
+        self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.id,
+                "price_unit": 30.75,
+                "discount": 10,
+            }
+        )
+
+        order.company_id.report_total_without_discount = True
+        order.company_id.display_discount_with_tax = False
+        display_vals = order._get_discount_display_vals()
+        self.assertFalse(display_vals["show_tax_included"])
+        self.assertAlmostEqual(display_vals["discount_amount"], order.discount_subtotal)
+        self.assertAlmostEqual(
+            display_vals["total_without_discount_amount"],
+            order.price_subtotal_no_discount,
+        )
+        self.assertTrue(display_vals["show_total_without_discount"])
+
+        order.company_id.display_discount_with_tax = True
+        display_vals = order._get_discount_display_vals()
+        self.assertTrue(display_vals["show_tax_included"])
+        self.assertAlmostEqual(display_vals["discount_amount"], order.discount_total)
+        self.assertAlmostEqual(
+            display_vals["total_without_discount_amount"],
+            order.price_total_no_discount,
+        )
+        self.assertTrue(display_vals["show_total_without_discount"])

@@ -1,7 +1,7 @@
 # Copyright 2018 ACSONE SA/NV
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 
 
 class SaleOrder(models.Model):
@@ -65,3 +65,30 @@ class SaleOrder(models.Model):
                     "price_total_no_discount": price_total_no_discount,
                 }
             )
+
+    def _get_discount_display_vals(self):
+        self.ensure_one()
+        show_tax_included = bool(self.display_discount_with_tax)
+        discount_amount = self.discount_total if show_tax_included else self.discount_subtotal
+        total_without_discount_amount = (
+            self.price_total_no_discount
+            if show_tax_included
+            else self.price_subtotal_no_discount
+        )
+        current_total_amount = self.amount_total if show_tax_included else self.amount_untaxed
+        return {
+            "discount_amount": discount_amount,
+            "discount_label": _("Discount (Tax incl.)") if show_tax_included else _("Discount"),
+            "show_discount": bool(discount_amount),
+            "show_tax_included": show_tax_included,
+            "show_total_without_discount": (
+                self.company_id.report_total_without_discount
+                and total_without_discount_amount != current_total_amount
+            ),
+            "total_without_discount_amount": total_without_discount_amount,
+            "total_without_discount_label": (
+                _("Total Without Discount")
+                if show_tax_included
+                else _("Subtotal Without Discount")
+            ),
+        }
