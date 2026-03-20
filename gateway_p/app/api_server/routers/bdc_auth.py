@@ -84,6 +84,10 @@ def _raise_if_bdc_business_error(
     user_id: Optional[UUID] = None,
     http_status_code: int = status.HTTP_400_BAD_REQUEST,
 ) -> None:
+    """
+    Verifica si la respuesta del banco contiene un error de negocio.
+    Si hay error, lanza HTTPException con la respuesta EXACTA del banco.
+    """
     if not isinstance(payload, dict):
         return
 
@@ -97,7 +101,6 @@ def _raise_if_bdc_business_error(
         return
 
     detail = payload.get("message") or default_message
-    bank_time = payload.get("time")
     if user_id is not None:
         logger.warning(
             "%s BDC devolvió error para usuario %s: statusCode=%s message=%s",
@@ -114,13 +117,10 @@ def _raise_if_bdc_business_error(
             detail,
         )
 
-    formatted_detail = f"Error en BDC (statusCode={status_code_value}): {detail}"
-    if bank_time:
-        formatted_detail = f"{formatted_detail} [{bank_time}]"
-
+    # Devolver la respuesta EXACTA del banco sin transformación
     raise HTTPException(
         status_code=http_status_code,
-        detail=formatted_detail,
+        detail=payload,  # Respuesta exacta del banco como dict
     )
 
 
@@ -296,7 +296,7 @@ async def bdc_auth():
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión en auth BDC: {type(e).__name__} - {str(e)}")
@@ -480,7 +480,7 @@ async def get_accounts(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener cuentas BDC: {type(e).__name__} - {str(e)}")
@@ -578,7 +578,7 @@ async def get_account_info(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener info de cuenta BDC: {type(e).__name__} - {str(e)}")
@@ -681,7 +681,7 @@ async def get_cvu_accounts(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener subcuentas CVU: {type(e).__name__} - {str(e)}")
@@ -932,7 +932,7 @@ async def create_sub_account(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"[CREATE_SUB_ACCOUNT] Error de conexión al crear subcuenta BDC: {type(e).__name__} - {str(e)}")
@@ -1031,7 +1031,7 @@ async def get_sub_account(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al consultar subcuenta BDC: {type(e).__name__} - {str(e)}")
@@ -1237,7 +1237,7 @@ async def update_account_alias_cvu(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     
     except httpx.RequestError as e:
@@ -1365,7 +1365,7 @@ async def get_movements(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener movimientos BDC: {type(e).__name__} - {str(e)}")
@@ -1483,7 +1483,7 @@ async def get_entity_data(
 
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener información de entidad BDC: {type(e).__name__} - {str(e)}")
@@ -1593,7 +1593,7 @@ async def get_ultimos_movimientos(
             detail = error_detail
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(
@@ -2014,16 +2014,9 @@ async def create_transfer_request(
                 except Exception as db_error:
                     logger.error(f"[TRANSFER-REQUEST] Error al actualizar transferencia en BD: {str(db_error)}")
 
-                # Calcular saldo actualizado en base al saldo previo validado
-                try:
-                    if result.get("statusCode") == 0:
-                        updated_balance = (available_balance - transfer_amount).quantize(Decimal("0.01"))
-                    else:
-                        updated_balance = available_balance.quantize(Decimal("0.01"))
-                    logger.info(f"[TRANSFER-REQUEST] Saldo actualizado calculado: {updated_balance}")
-                    result["updatedBalance"] = f"{updated_balance:.2f}"
-                except Exception as balance_error:
-                    logger.error(f"[TRANSFER-REQUEST] Error al calcular saldo actualizado: {str(balance_error)}")
+                # Nota: No agregamos updatedBalance - la APP debe calcular el saldo
+                # a partir del saldo previo y el monto transferido si lo necesita
+                logger.info("[TRANSFER-REQUEST] Respuesta del banco sin modificaciones")
 
                 _raise_if_bdc_business_error(
                     result,
@@ -2048,7 +2041,7 @@ async def create_transfer_request(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"[TRANSFER-REQUEST] Error de conexión con BDC: {type(e).__name__} - {str(e)}")
@@ -2210,7 +2203,7 @@ async def get_transfer_status(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     
     except httpx.RequestError as e:
@@ -2328,7 +2321,7 @@ async def get_snp_concepts(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener conceptos SNP: {type(e).__name__} - {str(e)}")
@@ -2443,7 +2436,7 @@ async def lookup_alias(
 
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al consultar alias BDC: {type(e).__name__} - {str(e)}")
@@ -2570,7 +2563,7 @@ async def create_alias(
 
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexion al crear alias BDC: {type(e).__name__} - {str(e)}")
@@ -2743,7 +2736,7 @@ async def edit_alias(
 
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexion al editar alias BDC: {type(e).__name__} - {str(e)}")
@@ -2873,7 +2866,7 @@ async def remove_alias(
 
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=f"Error en BDC: {detail}",
+            detail=detail,
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexion al eliminar alias BDC: {type(e).__name__} - {str(e)}")
