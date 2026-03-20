@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 from odoo.tools import frozendict
+import logging
 
-
+_logger = logging.getLogger(__name__)
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
@@ -17,6 +18,7 @@ class AccountMove(models.Model):
         
         Fix: Add isinstance checks before accessing needed_terms as dict.
         """
+        _logger.info("Computing needed terms for invoices")
         AccountTax = self.env['account.tax']
         for invoice in self.with_context(bin_size=False):
             is_draft = invoice.id != invoice._origin.id
