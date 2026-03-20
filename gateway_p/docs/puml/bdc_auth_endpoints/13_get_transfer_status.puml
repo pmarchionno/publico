@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title GET /bdc/movements/transfer-request/{origin_id}?token=<JWT_APP>
+APP -> MW: GET /bdc/movements/transfer-request/{origin_id}
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /movements/transfer-request/{origin_id}
+BDC --> MW: estado transferencia / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

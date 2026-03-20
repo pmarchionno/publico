@@ -1,0 +1,18 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title PATCH /bdc/sub-account/{cvu}?token=<JWT_APP>
+APP -> MW: PATCH /bdc/sub-account/{cvu}
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: PATCH /sub-account/{cvu}
+BDC --> MW: subcuenta actualizada / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

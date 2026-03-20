@@ -1,0 +1,39 @@
+@startuml
+!theme plain
+autonumber
+
+actor "Cliente (App)" as Client
+participant "Gateway API" as API
+participant "PaymentService" as Service
+participant "BankConnector" as Connector
+participant "Banco Pagador" as Bank
+
+Client -> API: POST /api/v1/transfers
+activate API
+API -> Service: create_transfer(dto)
+activate Service
+Service -> Connector: build_request(dto)
+activate Connector
+Connector --> Connector: map a schema banco
+Connector --> Service: TransferRequestPayload
+deactivate Connector
+
+Service -> Connector: execute(bankRequest)
+activate Connector
+Connector -> Bank: POST /movements/transfer-request
+note right of Bank
+Headers requeridos:
+ - Authorization: Bearer {token}
+ - X-SIGNATURE: HmacSHA256([uri]+payload, secret)
+ - Mutual TLS + VPN
+end note
+Bank --> Connector: {statusCode, message, time}
+deactivate Connector
+
+Connector --> Service: ConnectorResponse
+Service --> API: TransferDomainResult
+deactivate Service
+API --> Client: 200 OK {status, bankMessage}
+deactivate API
+
+@enduml

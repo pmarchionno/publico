@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title GET /bdc/snp-concepts?token=<JWT_APP>
+APP -> MW: GET /bdc/snp-concepts
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /get-snp-concepts
+BDC --> MW: conceptos SNP / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

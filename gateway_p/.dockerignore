@@ -1,0 +1,24 @@
+# Certificados (se montan como secretos en Cloud Run)
+certs/*.crt
+certs/*.key
+
+# Archivos de desarrollo
+.env
+.env.local
+*.pyc
+__pycache__/
+.pytest_cache/
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+test_*.py

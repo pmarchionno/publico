@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/apiV1/ultimosMovimientos?token=<JWT_APP>
+APP -> MW: POST /bdc/apiV1/ultimosMovimientos
+MW -> MW: Validar JWT APP
+MW -> BDC: POST /apiV1/ultimosMovimientos
+BDC --> MW: ultimos movimientos / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

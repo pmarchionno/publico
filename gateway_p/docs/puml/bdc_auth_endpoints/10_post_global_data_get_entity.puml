@@ -1,0 +1,18 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/global/data/get-entity?token=<JWT_APP>
+APP -> MW: POST /bdc/global/data/get-entity
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /global/data/get-entity
+BDC --> MW: datos entidad / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

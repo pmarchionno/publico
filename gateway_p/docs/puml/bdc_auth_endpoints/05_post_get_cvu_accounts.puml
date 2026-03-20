@@ -1,0 +1,21 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/accounts/get-cvu-accounts?token=<JWT_APP>
+APP -> MW: POST /bdc/accounts/get-cvu-accounts
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /accounts/get-cvu-accounts
+note right of MW
+Headers: Authorization + X-SIGNATURE
+end note
+BDC --> MW: listado subcuentas / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

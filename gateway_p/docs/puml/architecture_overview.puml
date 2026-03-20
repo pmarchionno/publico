@@ -1,0 +1,61 @@
+@startuml
+!theme plain
+hide empty members
+
+skinparam componentStyle uml2
+
+package "External World" {
+    [Clients (Mobile/Web)] as Clients
+    cloud "Banking Networks" as Banks
+    cloud "KYC Providers" as KYCProviders
+}
+
+package "Pagoflex Platform" {
+    
+    node "API Layer" {
+        [API Server\n(FastAPI)] as API
+        note right of API: REST Endpoints\nAuth (JWT)
+    }
+
+    node "Async Layer" {
+        [Scheduler\n(Celery)] as Scheduler
+        note right of Scheduler: Background Tasks\nRetries\nWebhooks
+    }
+
+    package "Core Domain" {
+        component "Payment Operation" as PaymentOp
+        component "KYC Service" as KYCSvc
+        component "Connector Manager" as ConnMgr
+        
+        interface "ConnectorIntegration" as IConn
+        interface "KYCProvider" as IKYC
+    }
+
+    database "Data Layer" {
+        database "PostgreSQL\n(Multi-tenant Schemas)" as DB
+        database "Redis\n(Broker & Cache)" as Redis
+    }
+}
+
+' Connections
+Clients --> API : HTTP/JSON
+API --> PaymentOp : Invokes
+API --> KYCSvc : Invokes
+
+PaymentOp --> ConnMgr : Uses
+ConnMgr ..> IConn : Implements
+IConn --> Banks : API Calls
+
+KYCSvc ..> IKYC : Implements
+IKYC --> KYCProviders : API Calls
+
+Scheduler --> PaymentOp : Async Processing
+Scheduler --> KYCSvc : Async Checks
+
+API --> Redis : Enqueue Tasks
+Scheduler --> Redis : Consume Tasks
+
+PaymentOp --> DB : Read/Write (Tenant Schema)
+KYCSvc --> DB : Read/Write (Tenant Schema)
+
+@enduml

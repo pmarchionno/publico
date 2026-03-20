@@ -1,0 +1,19 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title GET /bdc/auth/status
+APP -> MW: GET /bdc/auth/status
+MW -> MW: Validar Authorization Bearer (JWT APP)
+MW -> MW: Leer estado cache token BDC
+note over BDC
+Sin llamada externa al banco
+end note
+MW --> APP: 200 estado autenticación
+
+@enduml

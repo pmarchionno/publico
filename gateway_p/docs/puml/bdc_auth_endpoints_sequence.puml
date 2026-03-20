@@ -1,0 +1,185 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title 01) POST /bdc/auth
+APP -> MW: POST /bdc/auth
+MW -> BDC: POST /auth
+BDC --> MW: accessToken / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 02) GET /bdc/healthcheck
+APP -> MW: GET /bdc/healthcheck
+MW -> BDC: GET /healthcheck
+BDC --> MW: estado servicio / error
+MW --> APP: 200 / 503 / 500
+
+newpage
+title 03) GET /bdc/accounts?token=<JWT_APP>
+APP -> MW: GET /bdc/accounts?token=...
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /accounts
+BDC --> MW: cuentas / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 04) GET /bdc/accounts/info/{cbu_cvu_alias}?token=<JWT_APP>
+APP -> MW: GET /bdc/accounts/info/{id}?token=...
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /accounts/info/{id}
+BDC --> MW: info cuenta / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 05) POST /bdc/accounts/get-cvu-accounts?token=<JWT_APP>
+APP -> MW: POST /bdc/accounts/get-cvu-accounts
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /accounts/get-cvu-accounts
+note right of MW
+Headers: Authorization + X-SIGNATURE
+end note
+BDC --> MW: listado subcuentas / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 06) POST /bdc/sub-account?token=<JWT_APP>&tipo=...
+APP -> MW: POST /bdc/sub-account?tipo=empresa|p2p
+MW -> MW: Validar JWT APP
+MW -> MW: Generar alias/originId y firma
+MW -> BDC: POST /sub-account
+BDC --> MW: subcuenta creada / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 07) GET /bdc/sub-account/{origin_id}?token=<JWT_APP>
+APP -> MW: GET /bdc/sub-account/{origin_id}
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /sub-account/{origin_id}
+BDC --> MW: detalle subcuenta / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 08) PATCH /bdc/sub-account/{cvu}?token=<JWT_APP>
+APP -> MW: PATCH /bdc/sub-account/{cvu}
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: PATCH /sub-account/{cvu}
+BDC --> MW: subcuenta actualizada / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 09) POST /bdc/movements/{cbu_cvu_alias}?token=<JWT_APP>
+APP -> MW: POST /bdc/movements/{id}
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /movements/{id}
+BDC --> MW: movimientos / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 10) POST /bdc/global/data/get-entity?token=<JWT_APP>
+APP -> MW: POST /bdc/global/data/get-entity
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /global/data/get-entity
+BDC --> MW: datos entidad / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 11) POST /bdc/apiV1/ultimosMovimientos?token=<JWT_APP>
+APP -> MW: POST /bdc/apiV1/ultimosMovimientos
+MW -> MW: Validar JWT APP
+MW -> BDC: POST /apiV1/ultimosMovimientos
+BDC --> MW: ultimos movimientos / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 12) POST /bdc/transfer-request?token=<JWT_APP>
+APP -> MW: POST /bdc/transfer-request
+MW -> MW: Validar JWT APP y saldo
+MW -> BDC: GET /accounts/info/{destinationCbuCvu}
+BDC --> MW: datos cuenta destino / error
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /movements/transfer-request
+BDC --> MW: transferencia creada / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 13) GET /bdc/movements/transfer-request/{origin_id}?token=<JWT_APP>
+APP -> MW: GET /bdc/movements/transfer-request/{origin_id}
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /movements/transfer-request/{origin_id}
+BDC --> MW: estado transferencia / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 14) GET /bdc/snp-concepts?token=<JWT_APP>
+APP -> MW: GET /bdc/snp-concepts
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /get-snp-concepts
+BDC --> MW: conceptos SNP / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 15) POST /bdc/alias?token=<JWT_APP>
+APP -> MW: POST /bdc/alias
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /alias
+BDC --> MW: lookup alias / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 16) POST /bdc/alias-create?token=<JWT_APP>
+APP -> MW: POST /bdc/alias-create
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /alias-create
+BDC --> MW: alias creado / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 17) PATCH /bdc/alias-edit?token=<JWT_APP>
+APP -> MW: PATCH /bdc/alias-edit
+MW -> MW: Validar JWT APP y payload
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /alias-edit
+BDC --> MW: alias editado / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 18) POST /bdc/alias-remove?token=<JWT_APP>
+APP -> MW: POST /bdc/alias-remove
+MW -> MW: Validar JWT APP
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /alias-remove
+BDC --> MW: alias eliminado / error
+MW --> APP: 200 / 4xx / 5xx
+
+newpage
+title 19) GET /bdc/auth/status (debug)
+APP -> MW: GET /bdc/auth/status
+MW -> MW: Validar Authorization Bearer (JWT APP)
+MW -> MW: Leer estado cache token BDC
+note over BDC
+Sin llamada externa al banco
+end note
+MW --> APP: 200 estado autenticación
+
+newpage
+title 20) POST /bdc/auth/refresh (debug)
+APP -> MW: POST /bdc/auth/refresh
+MW -> MW: Validar Authorization Bearer (JWT APP)
+MW -> MW: Invalidar cache token BDC
+MW -> BDC: POST /auth
+BDC --> MW: token renovado / error
+MW --> APP: 200 / 500
+
+@enduml

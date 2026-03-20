@@ -1,0 +1,16 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title GET /bdc/healthcheck
+APP -> MW: GET /bdc/healthcheck
+MW -> BDC: GET /healthcheck
+BDC --> MW: estado servicio / error
+MW --> APP: 200 / 503 / 500
+
+@enduml

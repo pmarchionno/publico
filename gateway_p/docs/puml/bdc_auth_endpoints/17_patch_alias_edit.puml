@@ -1,0 +1,18 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title PATCH /bdc/alias-edit?token=<JWT_APP>
+APP -> MW: PATCH /bdc/alias-edit
+MW -> MW: Validar JWT APP y payload
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /alias-edit
+BDC --> MW: alias editado / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

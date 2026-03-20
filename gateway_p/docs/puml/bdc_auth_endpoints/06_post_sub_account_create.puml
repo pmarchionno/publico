@@ -1,0 +1,18 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/sub-account?token=<JWT_APP>&tipo=...
+APP -> MW: POST /bdc/sub-account?tipo=empresa|p2p
+MW -> MW: Validar JWT APP
+MW -> MW: Generar alias/originId y firma
+MW -> BDC: POST /sub-account
+BDC --> MW: subcuenta creada / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

@@ -1,0 +1,20 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/transfer-request?token=<JWT_APP>
+APP -> MW: POST /bdc/transfer-request
+MW -> MW: Validar JWT APP y saldo
+MW -> BDC: GET /accounts/info/{destinationCbuCvu}
+BDC --> MW: datos cuenta destino / error
+MW -> MW: Calcular X-SIGNATURE
+MW -> BDC: POST /movements/transfer-request
+BDC --> MW: transferencia creada / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

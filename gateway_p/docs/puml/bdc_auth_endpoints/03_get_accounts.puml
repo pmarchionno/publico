@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title GET /bdc/accounts?token=<JWT_APP>
+APP -> MW: GET /bdc/accounts?token=...
+MW -> MW: Validar JWT APP
+MW -> BDC: GET /accounts
+BDC --> MW: cuentas / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml

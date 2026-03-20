@@ -1,0 +1,18 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/auth/refresh
+APP -> MW: POST /bdc/auth/refresh
+MW -> MW: Validar Authorization Bearer (JWT APP)
+MW -> MW: Invalidar cache token BDC
+MW -> BDC: POST /auth
+BDC --> MW: token renovado / error
+MW --> APP: 200 / 500
+
+@enduml

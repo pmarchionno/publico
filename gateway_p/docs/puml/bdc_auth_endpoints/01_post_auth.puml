@@ -1,0 +1,16 @@
+@startuml
+!theme plain
+hide footbox
+autonumber
+
+actor "APP" as APP
+participant "Middleware" as MW
+participant "Banco de Comercio" as BDC
+
+title POST /bdc/auth
+APP -> MW: POST /bdc/auth
+MW -> BDC: POST /auth
+BDC --> MW: accessToken / error
+MW --> APP: 200 / 4xx / 5xx
+
+@enduml
