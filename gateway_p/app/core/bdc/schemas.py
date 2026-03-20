@@ -29,6 +29,8 @@ class BDCAuthData(BaseModel):
 
 class BDCResponse(BaseModel):
     """Schema genérico para respuestas de BDC API"""
+    model_config = ConfigDict(extra="allow")
+    
     statusCode: int = Field(..., description="Código de estado (0=éxito)")
     data: Optional[Dict[str, Any]] = Field(None, description="Datos de respuesta")
     time: Optional[str] = Field(None, description="Timestamp del servidor")
@@ -139,11 +141,12 @@ class BDCTransferRequestSimpleInput(BaseModel):
 
 
 class BDCTransferSuccessResponse(BaseModel):
-    """Schema para respuesta exitosa de transferencia"""
+    """Schema para respuesta exitosa de transferencia - Permite campos extra del banco"""
+    model_config = ConfigDict(extra="allow")
+    
     statusCode: int = Field(..., description="Código de estado (0=éxito)")
-    message: str = Field(..., description="Mensaje descriptivo")
-    time: str = Field(..., description="Timestamp del servidor BDC")
-    updatedBalance: Optional[str] = Field(None, description="Saldo actualizado después de la transferencia")
+    message: Optional[str] = Field(None, description="Mensaje descriptivo")
+    time: Optional[str] = Field(None, description="Timestamp del servidor BDC")
 
 
 # ============= Consulta de Transferencias =============
@@ -724,9 +727,11 @@ class BDCTokenCache(BaseModel):
 # ============= Healthcheck =============
 
 class BDCHealthcheckResponse(BaseModel):
-    """Schema para respuesta de healthcheck de BDC"""
+    """Schema para respuesta de healthcheck de BDC - Permite campos extra del banco"""
+    model_config = ConfigDict(extra="allow")
+    
     statusCode: int = Field(..., description="Código de estado (0=ok)")
-    time: str = Field(..., description="Timestamp del servidor BDC")
+    time: Optional[str] = Field(None, description="Timestamp del servidor BDC")
 
 
 # ============= SNP Concepts =============
