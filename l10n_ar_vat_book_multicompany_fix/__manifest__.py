@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Argentina VAT Book Multi-Company Fix',
-    'version': '17.0.1.0.0',
+    'version': '18.0.1.0.0',
     'category': 'Accounting/Localizations/Reporting',
     'summary': 'Corrige el filtro multi-company en el Libro de IVA (ZIP)',
     'description': """

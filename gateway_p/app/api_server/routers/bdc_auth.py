@@ -9,6 +9,7 @@ import json
 import random
 import string
 import time
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Optional
 from uuid import UUID
@@ -43,6 +44,9 @@ from app.core.bdc.schemas import (
     BDCHealthcheckResponse, 
     BDCMovementsRequest,
     BDCMovementsResponse,
+    BDCUnifiedMovement,
+    BDCUnifiedMovementsData,
+    BDCUnifiedMovementsResponse,
     BDCUltimosMovimientosRequest,
     BDCTransferRequest, 
     BDCTransferRequestInput,
@@ -60,6 +64,85 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bdc")
+
+
+def _normalize_movement_currency(currency: Optional[str]) -> str:
+    currency_map = {
+        "032": "ARS",
+        "840": "USD",
+    }
+    if not currency:
+        return "ARS"
+    return currency_map.get(str(currency).strip(), str(currency).strip())
+
+
+def _extract_bank_movement_id(movement: dict[str, Any]) -> str:
+    candidate_keys = (
+        "movimientoUId",
+        "movimientoUID",
+        "movimientoUid",
+        "idMovimiento",
+        "movementId",
+        "originId",
+    )
+
+    for key in candidate_keys:
+        value = movement.get(key)
+        if value is None:
+            continue
+
+        text_value = str(value).strip()
+        if text_value:
+            return text_value
+
+    return ""
+
+
+def _format_bank_movement(movement: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "idMovimiento": _extract_bank_movement_id(movement),
+        "fecha": str(movement.get("fechaMov") or movement.get("fechaSis") or ""),
+        "hora": str(movement.get("horaSis") or "00:00:00"),
+        "concepto": str(movement.get("concepto") or ""),
+        "referencia": str(movement.get("referencia") or "").strip(),
+        "debitoCredito": str(movement.get("debitoCredito") or ""),
+        "moneda": _normalize_movement_currency(movement.get("moneda")),
+        "importe": float(movement.get("importe") or 0),
+    }
+
+
+def _format_local_transfer_movement(transfer: TransferRecord, account_address: str) -> dict[str, Any]:
+    created_at = transfer.created_at
+    if created_at is None:
+        created_at = datetime.utcnow()
+
+    is_debit = transfer.source_address == account_address
+    concepto = transfer.concept or transfer.description or "TRANSFERENCIA"
+    referencia = transfer.connector_id or str(transfer.payment_id)
+    origin_id_value = "" if transfer.origin_id is None else str(transfer.origin_id).strip()
+
+    return {
+        "idMovimiento": origin_id_value,
+        "fecha": created_at.strftime("%Y-%m-%d"),
+        "hora": created_at.strftime("%H:%M:%S"),
+        "concepto": str(concepto),
+        "referencia": str(referencia),
+        "debitoCredito": "D" if is_debit else "C",
+        "moneda": _normalize_movement_currency(transfer.currency),
+        "importe": float(transfer.amount or 0),
+    }
+
+
+def _sort_unified_movements(movements: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        movements,
+        key=lambda movement: (
+            movement.get("fecha") or "",
+            movement.get("hora") or "",
+            movement.get("idMovimiento") or "",
+        ),
+        reverse=True,
+    )
 
 
 def _calculate_bdc_signature(path: str, payload: Any) -> str:
@@ -84,10 +167,6 @@ def _raise_if_bdc_business_error(
     user_id: Optional[UUID] = None,
     http_status_code: int = status.HTTP_400_BAD_REQUEST,
 ) -> None:
-    """
-    Verifica si la respuesta del banco contiene un error de negocio.
-    Si hay error, lanza HTTPException con la respuesta EXACTA del banco.
-    """
     if not isinstance(payload, dict):
         return
 
@@ -101,6 +180,7 @@ def _raise_if_bdc_business_error(
         return
 
     detail = payload.get("message") or default_message
+    bank_time = payload.get("time")
     if user_id is not None:
         logger.warning(
             "%s BDC devolvió error para usuario %s: statusCode=%s message=%s",
@@ -117,41 +197,14 @@ def _raise_if_bdc_business_error(
             detail,
         )
 
-    # Devolver la respuesta EXACTA del banco sin transformación
+    formatted_detail = f"Error en BDC (statusCode={status_code_value}): {detail}"
+    if bank_time:
+        formatted_detail = f"{formatted_detail} [{bank_time}]"
+
     raise HTTPException(
         status_code=http_status_code,
-        detail=payload,  # Respuesta exacta del banco como dict
+        detail=formatted_detail,
     )
-
-
-async def _generate_unique_cbu(bank_account_repository: BankAccountRepository) -> str:
-    """
-    Genera un número aleatorio de 22 dígitos para CBU/CVU único.
-    Valida que sea globalmente único en la entidad.
-    """
-    import random
-    
-    max_attempts = 100
-    attempt = 0
-    
-    while attempt < max_attempts:
-        # Generar 22 dígitos aleatorios
-        cbu = ''.join(str(random.randint(0, 9)) for _ in range(22))
-        
-        # Validar que sea único
-        existing = await bank_account_repository.get_by_cvu_cbu(cbu)
-        if not existing:
-            logger.info(f"CBU único generado: {cbu}")
-            return cbu
-        
-        attempt += 1
-    
-    logger.error(f"No se pudo generar CBU único después de {max_attempts} intentos")
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Error al generar CBU único para la subcuenta"
-    )
-
 
 async def _generate_alias(user: User, bank_account_repository: BankAccountRepository) -> str:
     """
@@ -296,7 +349,7 @@ async def bdc_auth():
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=detail,
+            detail=detail",
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión en auth BDC: {type(e).__name__} - {str(e)}")
@@ -480,7 +533,7 @@ async def get_accounts(
         
         raise HTTPException(
             status_code=e.response.status_code,
-            detail=detail,
+            detail=detail",
         )
     except httpx.RequestError as e:
         logger.error(f"Error de conexión al obtener cuentas BDC: {type(e).__name__} - {str(e)}")
@@ -705,7 +758,7 @@ async def get_cvu_accounts(
 )
 async def create_sub_account(
     token: str = Query(..., description="Token JWT requerido"),
-    tipo: str = Query('empresa', description="Tipo de cuenta: 'p2p' o 'empresa' (default: 'empresa')"),
+    tipo: str = Query('psp', description="Tipo de cuenta: 'psp' o 'empresa' (default: 'psp')"),
     user_repository: UserRepository = Depends(get_user_repository),
     bank_account_repository: BankAccountRepository = Depends(get_bank_account_repository),
 ):
@@ -813,7 +866,7 @@ async def create_sub_account(
             "currency": "032"           # Código de moneda ARS
         }
 
-        if tipo.strip().lower() == "p2p":
+        if tipo.strip().lower() == "psp":
             payload["owner"] = {
                 "personIdType": "CUI",
                 "personId": user.cuit_cuil,      # CUIT/CUIL del usuario autenticado
@@ -1261,7 +1314,7 @@ async def update_account_alias_cvu(
     summary="Endpoint de listado de movimientos",
     tags=["BDC - Movimientos"],
 )
-async def get_movements(
+async def get_movements_bdc(
     cbu_cvu_alias: str,
     request_data: BDCMovementsRequest,
     token: str = Query(..., description="Token JWT requerido"),
@@ -1352,6 +1405,185 @@ async def get_movements(
             )
             logger.info(f"Movimientos BDC obtenidos exitosamente para usuario {user.id}")
             return BDCMovementsResponse(**bdc_response)
+            
+    except httpx.HTTPStatusError as e:
+        error_detail = e.response.text
+        logger.error(f"Error HTTP al obtener movimientos BDC: {e.response.status_code} - {error_detail}")
+        
+        try:
+            error_data = e.response.json()
+            detail = error_data.get("message", error_detail)
+        except Exception:
+            detail = error_detail
+        
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=detail,
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Error de conexión al obtener movimientos BDC: {type(e).__name__} - {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"No se pudo conectar con el servicio BDC: {str(e)}",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado al obtener movimientos BDC: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener movimientos BDC: {str(e)}",
+        )
+    
+@router.post(
+    "/movements_local/{cbu_cvu_alias}",
+    response_model=BDCUnifiedMovementsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Endpoint de listado de movimientos",
+    tags=["BDC - Movimientos"],
+)
+async def get_movements(
+    cbu_cvu_alias: str,
+    request_data: BDCMovementsRequest,
+    token: str = Query(..., description="Token JWT requerido"),
+    user_repository: UserRepository = Depends(get_user_repository),
+    bank_account_repository: BankAccountRepository = Depends(get_bank_account_repository),
+):
+    """
+    Obtiene el listado de movimientos de una cuenta por CBU, CVU o Alias.
+    
+    Requiere token JWT para autenticación.
+    """
+    
+    try:
+        # Validar JWT y obtener usuario
+        raw_token = token
+        if not raw_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token requerido",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user_id_str = verify_access_token(raw_token)
+        if not user_id_str:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token inválido o expirado",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user = await user_repository.get_by_id(UUID(user_id_str))
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado",
+            )
+        
+        # Obtener token de autenticación con BDC
+        auth_service = get_bdc_auth_service()
+        bdc_token = await auth_service.get_token()
+        
+        bdc_url = f"{settings.bdc_base_url}/movements/{cbu_cvu_alias}"
+        logger.info(f"Consultando movimientos BDC para cuenta {cbu_cvu_alias} del usuario {user.id}")
+        
+        # Preparar payload y calcular firma HMAC
+        payload = request_data.model_dump()
+        payload_json = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+        signature = _calculate_bdc_signature(f"movements/{cbu_cvu_alias}", payload_json)
+        
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {bdc_token}",
+            "X-SIGNATURE": signature,
+        }
+        
+        logger.info(f"Payload JSON para BDC: {payload_json}")
+        print(f"Payload JSON para BDC: {payload_json}")  # Print para asegurar que aparezca en logs
+        logger.info(f"Headers para BDC: {headers}")
+        print(f"Headers para BDC: {headers}")  # Print para asegurar que aparezca en logs
+        
+        async with create_bdc_client() as client:
+            response = await client.post(
+                bdc_url,
+                headers=headers,
+                content=payload_json
+            )
+            
+            # Si el token expiró, renovar e intentar de nuevo
+            if response.status_code == 401:
+                logger.warning("Token BDC rechazado (401), renovando...")
+                auth_service.invalidate_cache()
+                bdc_token = await auth_service.get_token()
+                headers["Authorization"] = f"Bearer {bdc_token}"
+                response = await client.post(
+                    bdc_url,
+                    headers=headers,
+                    content=payload_json,
+                )
+            
+            response.raise_for_status()
+            
+            bdc_response = response.json()
+            _raise_if_bdc_business_error(
+                bdc_response,
+                "Error al obtener movimientos en BDC",
+                context="[GET_MOVEMENTS]",
+                user_id=user.id,
+            )
+
+            bank_data = bdc_response.get("data") or {}
+            account_statement = bank_data.get("sdtEstadoDeCuenta") or {}
+            bank_movements_raw = ((account_statement.get("movimientos") or {}).get("SdtsBTMovimiento") or [])
+            if isinstance(bank_movements_raw, dict):
+                bank_movements_raw = [bank_movements_raw]
+
+            unified_movements = [
+                _format_bank_movement(movement)
+                for movement in bank_movements_raw
+                if isinstance(movement, dict)
+            ]
+
+            local_movements: list[dict[str, Any]] = []
+            local_account = await bank_account_repository.get_by_cvu_cbu(cbu_cvu_alias)
+            if local_account and local_account.user_id == user.id and local_account.status == AccountStatus.ACTIVE:
+                try:
+                    start_date = datetime.strptime(request_data.startDate, "%Y-%m-%d").date()
+                    end_date = datetime.strptime(request_data.endDate, "%Y-%m-%d").date()
+                    local_transfer_records = await bank_account_repository.get_transfer_records(
+                        cbu_cvu_alias,
+                        start_date,
+                        end_date,
+                    )
+                    local_movements = [
+                        _format_local_transfer_movement(transfer, cbu_cvu_alias)
+                        for transfer in local_transfer_records
+                    ]
+                except ValueError:
+                    logger.warning(
+                        "[GET_MOVEMENTS] No se pudieron parsear las fechas %s - %s para consultar movimientos locales",
+                        request_data.startDate,
+                        request_data.endDate,
+                    )
+
+            unified_movements.extend(local_movements)
+            unified_movements = _sort_unified_movements(unified_movements)
+
+            logger.info(f"Movimientos BDC obtenidos exitosamente para usuario {user.id}")
+            return BDCUnifiedMovementsResponse(
+                statusCode=bdc_response.get("statusCode", 0),
+                message=bdc_response.get("message"),
+                time=bdc_response.get("time"),
+                data=BDCUnifiedMovementsData(
+                    productoUID=account_statement.get("productoUID"),
+                    fechaDesde=account_statement.get("fechaDesde"),
+                    fechaHasta=account_statement.get("fechaHasta"),
+                    saldoPartida=account_statement.get("saldoPartida"),
+                    totalRegistros=len(unified_movements),
+                    movimientos=[BDCUnifiedMovement(**movement) for movement in unified_movements],
+                ),
+            )
             
     except httpx.HTTPStatusError as e:
         error_detail = e.response.text
@@ -1514,7 +1746,7 @@ async def get_ultimos_movimientos(
     user_repository: UserRepository = Depends(get_user_repository),
 ):
     """
-    Reenvía la solicitud de últimos movimientos al endpoint legacy de BDC.
+    Reenvía la solicitud de últimos movimientos al endpoint vigente de BDC.
     """
     try:
         raw_token = token
@@ -1542,31 +1774,47 @@ async def get_ultimos_movimientos(
 
         auth_service = get_bdc_auth_service()
         bdc_token = await auth_service.get_token()
-        bdc_url = f"{settings.bdc_base_url}/apiV1/ultimosMovimientos"
-        payload = request_data.model_dump()
+
+        cbu_cvu_alias = (request_data.cvu or request_data.cbu or "").strip()
+        if not cbu_cvu_alias:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe enviar cbu o cvu para consultar movimientos",
+            )
+
+        bdc_url = f"{settings.bdc_base_url}/movements/{cbu_cvu_alias}"
+        payload = BDCMovementsRequest(
+            startDate=request_data.startDate,
+            endDate=request_data.endDate,
+            pageSize=request_data.pageSize,
+            pageOffset=request_data.pageOffset,
+        ).model_dump()
+        payload_json = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+        signature = _calculate_bdc_signature(f"movements/{cbu_cvu_alias}", payload_json)
 
         headers = {
             "accept": "application/json",
             "Content-Type": "application/json",
             "Authorization": f"Bearer {bdc_token}",
+            "X-SIGNATURE": signature,
         }
 
         async with create_bdc_client() as client:
             response = await client.post(
                 bdc_url,
                 headers=headers,
-                json=payload,
+                content=payload_json,
             )
 
             if response.status_code == 401:
-                logger.warning("Token BDC rechazado (401) en apiV1/ultimosMovimientos, renovando...")
+                logger.warning("Token BDC rechazado (401) en movimientos legacy-adapter, renovando...")
                 auth_service.invalidate_cache()
                 bdc_token = await auth_service.get_token()
                 headers["Authorization"] = f"Bearer {bdc_token}"
                 response = await client.post(
                     bdc_url,
                     headers=headers,
-                    json=payload,
+                    content=payload_json,
                 )
 
             response.raise_for_status()
@@ -1582,7 +1830,7 @@ async def get_ultimos_movimientos(
     except httpx.HTTPStatusError as e:
         error_detail = e.response.text
         logger.error(
-            "Error HTTP en apiV1/ultimosMovimientos BDC: %s - %s",
+            "Error HTTP en adapter ultimosMovimientos -> /movements/{cbu_cvu_alias} BDC: %s - %s",
             e.response.status_code,
             error_detail,
         )
@@ -1597,7 +1845,7 @@ async def get_ultimos_movimientos(
         )
     except httpx.RequestError as e:
         logger.error(
-            "Error de conexión en apiV1/ultimosMovimientos BDC: %s - %s",
+            "Error de conexión en adapter ultimosMovimientos -> /movements/{cbu_cvu_alias} BDC: %s - %s",
             type(e).__name__,
             str(e),
         )
@@ -1608,7 +1856,7 @@ async def get_ultimos_movimientos(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error inesperado en apiV1/ultimosMovimientos: %s", e)
+        logger.error("Error inesperado en adapter de ultimosMovimientos: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener últimos movimientos: {str(e)}",
@@ -1820,17 +2068,18 @@ async def create_transfer_request(
         )
         logger.info(f"[TRANSFER-REQUEST] Saldo disponible: {available_balance}")
         
-        if transfer_amount > available_balance:
-            logger.warning(f"[TRANSFER-REQUEST] Fondos insuficientes: {transfer_amount} > {available_balance}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "INSUFFICIENT_FUNDS",
-                    "message": "Saldo insuficiente para realizar la transferencia",
-                    "required": str(transfer_amount),
-                    "available": str(available_balance)
-                },
-            )
+        # PABLO - 10032026 - Permitir que el monto de transferencia sea menor al saldo disponible
+        # if transfer_amount > available_balance:
+        #     logger.warning(f"[TRANSFER-REQUEST] Fondos insuficientes: {transfer_amount} > {available_balance}")
+        #     raise HTTPException(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         detail={
+        #             "code": "INSUFFICIENT_FUNDS",
+        #             "message": "Saldo insuficiente para realizar la transferencia",
+        #             "required": str(transfer_amount),
+        #             "available": str(available_balance)
+        #         },
+        #     )
         
         # ====== CONSTRUIR DATOS COMPLETOS DE TRANSFERENCIA ======
         logger.info("[TRANSFER-REQUEST] Construyendo datos de transferencia con información verificada")
@@ -2014,9 +2263,16 @@ async def create_transfer_request(
                 except Exception as db_error:
                     logger.error(f"[TRANSFER-REQUEST] Error al actualizar transferencia en BD: {str(db_error)}")
 
-                # Nota: No agregamos updatedBalance - la APP debe calcular el saldo
-                # a partir del saldo previo y el monto transferido si lo necesita
-                logger.info("[TRANSFER-REQUEST] Respuesta del banco sin modificaciones")
+                # Calcular saldo actualizado en base al saldo previo validado
+                try:
+                    if result.get("statusCode") == 0:
+                        updated_balance = (available_balance - transfer_amount).quantize(Decimal("0.01"))
+                    else:
+                        updated_balance = available_balance.quantize(Decimal("0.01"))
+                    logger.info(f"[TRANSFER-REQUEST] Saldo actualizado calculado: {updated_balance}")
+                    result["updatedBalance"] = f"{updated_balance:.2f}"
+                except Exception as balance_error:
+                    logger.error(f"[TRANSFER-REQUEST] Error al calcular saldo actualizado: {str(balance_error)}")
 
                 _raise_if_bdc_business_error(
                     result,
@@ -2982,15 +3238,3 @@ async def refresh_bdc_token(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al renovar token BDC: {str(e)}",
         )
-
-
-
-
-
-
-
-
-
-
-
-
