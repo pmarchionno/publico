@@ -13,11 +13,15 @@ class L10nArTaxReportHandler(models.AbstractModel):
         Original code uses self.env.company.ids which only returns the current
         company, ignoring the companies selected in the report options.
         
-        This fix uses get_report_company_ids(options) to get all selected
-        companies, aligning the ZIP export behavior with the XLSX export.
+        This fix gets company_ids from options['companies'] to include all
+        selected companies, aligning the ZIP export behavior with the XLSX export.
         """
-        # FIX: Use selected companies from options instead of current company only
-        company_ids = self.get_report_company_ids(options)
+        # FIX: Get companies from options instead of self.env.company.ids
+        if options.get("companies"):
+            company_ids = [comp["id"] for comp in options["companies"]]
+        else:
+            # Fallback to current company if options doesn't have companies
+            company_ids = self.env.company.ids
         
         selected_journal_types = self._vat_book_get_selected_tax_types(options)
         domain = [
