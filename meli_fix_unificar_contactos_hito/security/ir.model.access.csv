@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_unificar_contactos_wizard,Unificar Contactos Wizard,model_meli_fix_unificar_contactos_hito_unificar_contactos_wizard,base.group_user,1,1,1,1
